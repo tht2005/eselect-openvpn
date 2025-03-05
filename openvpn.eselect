@@ -1,0 +1,166 @@
+# -*-eselect-*-  vim: ft=eselect
+# Copyright 2005-2025 Gentoo Authors
+# Distributed under the terms of the GNU GPL version 2 or later
+
+DESCRIPTION="Manage /etc/openvpn/{SERVICE}.conf symlink for each /etc/init.d/openvpn.{SERVICE} file. All *.ovpn file need to be placed in /etc/openvpn."
+MAINTAINER="dangduong31205@gmail.com"
+VERSION="0.1.0-final"
+
+### variables ###
+
+INIT_DIR="${EROOT}/etc/init.d"
+OPENVPN_DIR="${EROOT}/etc/openvpn"
+
+### functions ###
+
+echo_service_exists() {
+    if [[ -f "${INIT_DIR}/openvpn.$1" ]]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
+
+echo_list_item_from_number_or_word() {
+    local target targets
+    target=$1
+    targets=( $2 ) 
+    # number case
+    if is_number "${target}"; then
+        [[ ${target} -ge 1 && ${target} -le ${#targets[@]} ]] \
+            || die -q "Number out of range: $1"
+        target=${targets[target-1]%%:*}
+    # word case
+    else
+        has "${target}" "${targets[@]%%:*}" \
+            || die -q "Keyword \"${target}\" doesn't appear to be valid!"
+    fi
+    echo "${target}"
+}
+
+### ###
+
+echo_service_list() {
+    local init_file_list filename extension
+    init_file_list="$(find ${INIT_DIR} -name "openvpn.*")"
+    for filename in ${init_file_list}; do
+        filename="$(basename ${filename})"
+        extension="${filename#*.}"
+        echo "${extension}"
+    done
+}
+
+echo_target_list() {
+    local init_target_list filename
+    init_target_list="$(find ${OPENVPN_DIR} -name "*.ovpn")"
+    for filename in ${init_target_list}; do
+        echo $(basename "${filename}")
+    done
+}
+
+### ###
+
+echo_service_from_number_or_word() {
+    echo_list_item_from_number_or_word $1 "$(echo_service_list)"
+}
+
+echo_target_from_number_or_word() {
+    echo_list_item_from_number_or_word $1 "$(echo_target_list)"
+}
+
+### ###
+
+# $1: service
+# $2: target
+set_symlink() {
+    local target_file="${OPENVPN_DIR}/$2"
+    local symlink="${OPENVPN_DIR}/$1.conf"
+    ln -sf "${target_file}" "${symlink}"
+}
+# $1: service
+# $2: target
+check_symlink() {
+    local target_file="${OPENVPN_DIR}/$2"
+    local symlink="${OPENVPN_DIR}/$1.conf"
+
+    if [[ -L "${symlink}" && "${target_file}" -ef ${symlink} ]]; then
+        echo "true"
+    else
+        echo "false"
+    fi
+}
+
+### list service & ovpn file ###
+
+describe_list() {
+    echo "List all available SERVICEs and .ovpn files"
+}
+do_list() {
+    [[ $# -gt 0 ]] && die -q "Too many parameters"
+
+    local services i
+
+    services=( $(echo_service_list) )
+
+    write_list_start "Available openvpn SERVICEs:"
+    for (( i = 0; i < ${#services[@]}; i = i + 1 )); do
+        services[i]=${services[i]%%:*}
+    done
+    write_numbered_list "${services[@]}"
+
+    local targets label j
+
+    targets=( $(echo_target_list) )
+    for (( i = 0; i < ${#targets[@]}; i = i + 1 )); do
+        targets[i]=${targets[i]%%:*}
+        label=""
+        for (( j = 0; j < ${#services[@]}; j = j + 1 )); do
+            [[ $(check_symlink "${services[j]}" "${targets[i]}") = "true" ]] \
+                && label="${label} $((j+1))"
+        done
+        targets[i]="${targets[i]} $(highlight ${label})"
+    done
+    write_list_start "Available target for the {SERVICE}.ovpn symlinks:"
+    write_numbered_list "${targets[@]}"
+}
+
+### set action ###
+
+describe_set() {
+    echo "Set a new .ovpn symlink target for <service>"
+}
+
+describe_set_parameters() {
+    echo "<service> <target>"
+}
+
+describe_set_options() {
+    echo "service: Service name of number (from 'list' action)"
+    echo "target: Target name or number (from 'list' action)"
+}
+
+do_set() {
+    [[ -z $1 ]] && die -q "You didn't tell me the service to change it's .ovpn symlink"
+    [[ -z $2 ]] && die -q "You didn't tell me the target to make symlink"
+    [[ $# -gt 2 ]] && die -q "Too many parameters"
+
+    local service=$(echo_service_from_number_or_word $1)
+    local target=$(echo_target_from_number_or_word $2)
+
+    set_symlink "${service}" "${target}"
+}
+
+### Show action ###
+
+# describe_show() {
+#     echo "Show a SERVICE's .conf symlink"
+# }
+# describe_show_parameters() {
+#     echo "<service>"
+# }
+# describe_show_options() {
+#     echo "service: Service name of number (from 'list' action)"
+# }
+# do_show() {
+#     echo "";
+# }
