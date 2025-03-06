@@ -21,6 +21,7 @@ HELPER = $(HELPERDIR)/eselect-repo-helper
 all:
 
 install:
-	install -m0644 openvpn.eselect $(DESTDIR)$(ESELECTDIR)/
+	mkdir -p "$(DESTDIR)$(ESELECTDIR)/"
+	install -m0644 openvpn.eselect "$(DESTDIR)$(ESELECTDIR)/"
 
 .PHONY: all install clean
