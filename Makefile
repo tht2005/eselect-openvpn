@@ -23,7 +23,4 @@ all: install
 install:
 	install -m0644 openvpn.eselect $(DESTDIR)$(ESELECTDIR)/
 
-clean:
-	rm -f openvpn.eselect
-
 .PHONY: all install clean
