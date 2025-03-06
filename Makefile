@@ -18,7 +18,7 @@ ESELECTDIR = /usr/share/eselect/modules
 CONFIG = $(CONFIGDIR)/repository.conf
 HELPER = $(HELPERDIR)/eselect-repo-helper
 
-all: install
+all:
 
 install:
 	install -m0644 openvpn.eselect $(DESTDIR)$(ESELECTDIR)/
